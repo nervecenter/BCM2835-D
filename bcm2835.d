@@ -22,7 +22,8 @@ module bcm2835;
 import bcm2835h,
     std.stdio,
     core.thread,
-    core.time;
+    core.time,
+    std.mmfile;
 
 enum BCK2835_LIBRARY_BUILD = true;
 
@@ -45,22 +46,22 @@ enum BCK2835_LIBRARY_BUILD = true;
 uint * bcm2835_peripherals_base = cast(uint *)BCM2835_PERI_BASE;
 uint bcm2835_peripherals_size = BCM2835_PERI_SIZE;
 
-const void * MAP_FAILED = -1;
+enum MAP_FAILED = -1;
 
-/* Virtual memory address of the mapped peripherals block 
+/* Virtual memory mapped peripherals block 
  */
-uint * bcm2835_peripherals = cast(uint *)MAP_FAILED;
+MmFile bcm2835_peripherals;
 
 /* And the register bases within the peripherals block
  */
-uint * bcm2835_gpio        = cast(uint *)MAP_FAILED;
-uint * bcm2835_pwm         = cast(uint *)MAP_FAILED;
-uint * bcm2835_clk         = cast(uint *)MAP_FAILED;
-uint * bcm2835_pads        = cast(uint *)MAP_FAILED;
-uint * bcm2835_spi0        = cast(uint *)MAP_FAILED;
-uint * bcm2835_bsc0        = cast(uint *)MAP_FAILED;
-uint * bcm2835_bsc1        = cast(uint *)MAP_FAILED;
-uint * bcm2835_st          = cast(uint *)MAP_FAILED;
+ulong bcm2835_gpio        = MAP_FAILED;
+ulong bcm2835_pwm         = MAP_FAILED;
+ulong bcm2835_clk         = MAP_FAILED;
+ulong bcm2835_pads        = MAP_FAILED;
+ulong bcm2835_spi0        = MAP_FAILED;
+ulong bcm2835_bsc0        = MAP_FAILED;
+ulong bcm2835_bsc1        = MAP_FAILED;
+ulong bcm2835_st          = MAP_FAILED;
 
 
 /* This variable allows us to test on hardware other than RPi.
@@ -1311,14 +1312,14 @@ bool bcm2835_init()
     {
         bcm2835_peripherals = cast(uint *)BCM2835_PERI_BASE;
 
-        bcm2835_pads = bcm2835_peripherals + BCM2835_GPIO_PADS/4;
-        bcm2835_clk  = bcm2835_peripherals + BCM2835_CLOCK_BASE/4;
-        bcm2835_gpio = bcm2835_peripherals + BCM2835_GPIO_BASE/4;
-        bcm2835_pwm  = bcm2835_peripherals + BCM2835_GPIO_PWM/4;
-        bcm2835_spi0 = bcm2835_peripherals + BCM2835_SPI0_BASE/4;
-        bcm2835_bsc0 = bcm2835_peripherals + BCM2835_BSC0_BASE/4;
-        bcm2835_bsc1 = bcm2835_peripherals + BCM2835_BSC1_BASE/4;
-        bcm2835_st   = bcm2835_peripherals + BCM2835_ST_BASE/4;
+        bcm2835_pads = BCM2835_GPIO_PADS/4;
+        bcm2835_clk  = BCM2835_CLOCK_BASE/4;
+        bcm2835_gpio = BCM2835_GPIO_BASE/4;
+        bcm2835_pwm  = BCM2835_GPIO_PWM/4;
+        bcm2835_spi0 = BCM2835_SPI0_BASE/4;
+        bcm2835_bsc0 = BCM2835_BSC0_BASE/4;
+        bcm2835_bsc1 = BCM2835_BSC1_BASE/4;
+        bcm2835_st   = BCM2835_ST_BASE/4;
         return 1; /* Success */
     }
 
@@ -1361,6 +1362,8 @@ bool bcm2835_init()
         stderr.writefln("bcm2835_init: Unable to open /dev/mem: %s", strerror(errno));
         goto exit;
     }
+
+    bcm2835_peripherals = MmFile("/dev/mem", Mode.readWrite, bcm2835_peripherals_size, null, 0);
     
     /* Base of the peripherals block is mapped to VM */
     bcm2835_peripherals = mapmem("gpio", bcm2835_peripherals_size, memfd, cast(uint)bcm2835_peripherals_base);
@@ -1369,14 +1372,14 @@ bool bcm2835_init()
         // which are at fixed offsets within the mapped peripherals block
         // Caution: bcm2835_peripherals is uint *, so divide offsets by 4
         */
-        bcm2835_gpio = bcm2835_peripherals + BCM2835_GPIO_BASE/4;
-        bcm2835_pwm  = bcm2835_peripherals + BCM2835_GPIO_PWM/4;
-        bcm2835_clk  = bcm2835_peripherals + BCM2835_CLOCK_BASE/4;
-        bcm2835_pads = bcm2835_peripherals + BCM2835_GPIO_PADS/4;
-        bcm2835_spi0 = bcm2835_peripherals + BCM2835_SPI0_BASE/4;
-        bcm2835_bsc0 = bcm2835_peripherals + BCM2835_BSC0_BASE/4; /* I2C */
-        bcm2835_bsc1 = bcm2835_peripherals + BCM2835_BSC1_BASE/4; /* I2C */
-        bcm2835_st   = bcm2835_peripherals + BCM2835_ST_BASE/4;
+        bcm2835_gpio = BCM2835_GPIO_BASE/4;
+        bcm2835_pwm  = BCM2835_GPIO_PWM/4;
+        bcm2835_clk  = BCM2835_CLOCK_BASE/4;
+        bcm2835_pads = BCM2835_GPIO_PADS/4;
+        bcm2835_spi0 = BCM2835_SPI0_BASE/4;
+        bcm2835_bsc0 = BCM2835_BSC0_BASE/4; /* I2C */
+        bcm2835_bsc1 = BCM2835_BSC1_BASE/4; /* I2C */
+        bcm2835_st   = BCM2835_ST_BASE/4;
 
         ok = true;
     }
